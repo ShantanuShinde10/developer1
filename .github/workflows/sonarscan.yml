@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-java@v2
         with:
           java-version: '11'
-          distribution: 'adoptopenjdk'
+          distribution: 'temurin'  # Use 'temurin' instead of 'adoptopenjdk'
 
       # Step 3: Install SonarScanner
       - name: Install SonarScanner
@@ -58,7 +58,7 @@ jobs:
           echo "SONAR_SCANNER_HOME=$SONAR_SCANNER_HOME" >> $GITHUB_ENV
           echo "PATH=$PATH" >> $GITHUB_ENV
 
-      # Step 4: Run SonarScanner to analyze the project
+      # Step 4: Run SonarScanner
       - name: Run SonarScanner
         run: |
           sonar-scanner \
