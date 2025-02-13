@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: '17'
-          distribution: 'adoptopenjdk'  # You can change to 'zulu', 'openjdk', etc., if you prefer another distribution
+          distribution: 'temurin'  # Correct distribution name for Java 17
 
       - name: Set up Python
         uses: actions/setup-python@v3
