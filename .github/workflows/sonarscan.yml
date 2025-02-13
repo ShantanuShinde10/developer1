@@ -31,7 +31,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 4: Set up SonarCloud
+      # Step 4: Install SonarScanner manually
+      - name: Install SonarScanner
+        run: |
+          curl -sS https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip -o sonar-scanner.zip
+          unzip sonar-scanner.zip -d /opt/
+          export SONAR_SCANNER_HOME=/opt/sonar-scanner-cli-4.8.0.2856-linux
+          export PATH=$SONAR_SCANNER_HOME/bin:$PATH
+          echo "SONAR_SCANNER_HOME=$SONAR_SCANNER_HOME" >> $GITHUB_ENV
+          echo "PATH=$PATH" >> $GITHUB_ENV
+
+      # Step 5: Run SonarCloud Scan
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@v1
         with:
