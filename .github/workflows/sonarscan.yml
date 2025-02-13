@@ -11,7 +11,7 @@ on:
 jobs:
   sonarq_analysis:
     runs-on: ubuntu-latest
-    
+
     steps:
       # Step 1: Set up JDK 17 with Zulu OpenJDK
       - name: Set up JDK 17
@@ -19,19 +19,12 @@ jobs:
         with:
           java-version: '17'
           distribution: 'zulu'  # Using Zulu OpenJDK distribution
-          
-      # Step 2: Set JAVA_HOME and PATH environment variables
-      - name: Set JAVA_HOME and PATH
-        run: |
-          echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))" >> $GITHUB_ENV
-          echo "PATH=$JAVA_HOME/bin:$PATH" >> $GITHUB_ENV  # Add Java's bin directory to PATH
-          echo "JAVA_HOME_17_X64=$JAVA_HOME" >> $GITHUB_ENV  # Set JAVA_HOME for 64-bit version
 
-      # Step 3: Checkout code
+      # Step 2: Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 4: Install SonarScanner
+      # Step 3: Install SonarScanner
       - name: Install SonarScanner
         run: |
           # Download and install SonarScanner
@@ -42,10 +35,13 @@ jobs:
           echo "SONAR_SCANNER_HOME=$SONAR_SCANNER_HOME" >> $GITHUB_ENV
           echo "PATH=$PATH" >> $GITHUB_ENV
 
-      # Step 5: Run SonarQube analysis using sonar-scanner
+      # Step 4: Run SonarQube Scanner
       - name: Run SonarQube Scanner
         run: |
-          sonar-scanner \
+          # Make sure sonar-scanner is executable
+          chmod +x $SONAR_SCANNER_HOME/bin/sonar-scanner
+          # Run sonar-scanner command
+          $SONAR_SCANNER_HOME/bin/sonar-scanner \
             -Dsonar.projectKey=shantanushinde10 \
             -Dsonar.organization=your_organization_key_here \
             -Dsonar.host.url=https://sonarcloud.io \
