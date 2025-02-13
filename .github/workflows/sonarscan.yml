@@ -16,9 +16,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install dependencies (for JS/Node projects)
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
         run: |
-          npm install  # Or any other setup command for your language (e.g., pip install for Python)
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Run SonarQube Scan
         env:
@@ -28,6 +34,7 @@ jobs:
           unzip sonar-scanner-cli-4.6.2.2472-linux.zip
           ./sonar-scanner-4.6.2.2472-linux/bin/sonar-scanner \
             -Dsonar.projectKey=shantanushinde10 \
-            -Dsonar.organization=Shantanu Shinde \
+            -Dsonar.organization=shantanu_shinde  # Ensure no spaces in the organization key
             -Dsonar.host.url=http://your_sonarqube_instance_url \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.sources=src
