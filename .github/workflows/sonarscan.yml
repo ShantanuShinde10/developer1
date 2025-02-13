@@ -19,12 +19,18 @@ jobs:
         with:
           java-version: '17'
           distribution: 'zulu'  # Using Zulu OpenJDK distribution
+          
+      # Step 2: Set the JAVA_HOME environment variable
+      - name: Set JAVA_HOME
+        run: |
+          echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))" >> $GITHUB_ENV
+          echo "JAVA_HOME_17_X64=$JAVA_HOME" >> $GITHUB_ENV  # Set JAVA_HOME for 64-bit version
 
-      # Step 2: Checkout code
+      # Step 3: Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 3: Set up SonarCloud
+      # Step 4: Set up SonarCloud
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@v1
         with:
@@ -33,3 +39,4 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  # Ensure your SONAR_TOKEN is in your GitHub secrets
           SONAR_PROJECT_KEY: 'shantanushinde10'    # Your project key
           SONAR_HOST_URL: 'https://sonarcloud.io'
+          JAVA_HOME: ${{ env.JAVA_HOME }}  # Pass JAVA_HOME to SonarCloud action
