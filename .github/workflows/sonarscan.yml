@@ -13,12 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # Step 1: Set up JDK 17 with Adoptium
+      # Step 1: Set up JDK 17 with Zulu OpenJDK
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
-          distribution: 'adoptium'  # Corrected distribution to Adoptium (formerly AdoptOpenJDK)
+          distribution: 'zulu'  # Using Zulu OpenJDK distribution
 
       # Step 2: Checkout code
       - name: Checkout code
