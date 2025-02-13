@@ -13,11 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # Step 1: Set up JDK 17
+      # Step 1: Set up JDK 17 with Adoptium
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
+          distribution: 'adoptopenjdk'  # Specify distribution as AdoptOpenJDK (Adoptium now)
 
       # Step 2: Checkout code
       - name: Checkout code
