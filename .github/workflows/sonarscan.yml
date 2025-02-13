@@ -66,13 +66,14 @@ jobs:
       run: |
         echo "Running SonarScanner..."
         sonar-scanner \
-          -Dsonar.organization=<your-sonarcloud-organization> \
-          -Dsonar.projectKey=<your-sonarcloud-project-key> \
+          -Dsonar.organization=your-organization-name-here \
+          -Dsonar.projectKey=your-project-key-here \
           -Dsonar.sources=.
-        
-        # Ensure to replace <your-sonarcloud-organization> and <your-sonarcloud-project-key> with your actual values.
 
-    # Optional: Step 5: Cache SonarScanner dependencies (if desired)
+        # Make sure to replace your-organization-name-here and your-project-key-here
+        # with your actual values from your SonarCloud project.
+
+    # Optional: Step 5: Cache SonarCloud dependencies
     - name: Cache SonarCloud dependencies
       uses: actions/cache@v2
       with:
