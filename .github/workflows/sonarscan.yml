@@ -27,5 +27,5 @@ jobs:
           entryPoint: 'sonar-scanner'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_PROJECT_KEY: 'your_project_key_here'
+          SONAR_PROJECT_KEY: 'shantanushinde10'
           SONAR_HOST_URL: 'https://sonarcloud.io'
