@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: '17'
-          distribution: 'zulu'  # Using Zulu OpenJDK distribution
+          distribution: 'zulu'
 
       # Step 2: Checkout code
       - name: Checkout code
@@ -30,16 +30,26 @@ jobs:
           # Download and install SonarScanner
           curl -sS https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip -o sonar-scanner.zip
           unzip sonar-scanner.zip -d /opt/
+          
+          # Check if files exist after extraction
+          ls -l /opt/sonar-scanner-cli-4.8.0.2856-linux
+
+          # Set environment variables
           export SONAR_SCANNER_HOME=/opt/sonar-scanner-cli-4.8.0.2856-linux
           export PATH=$SONAR_SCANNER_HOME/bin:$PATH
           echo "SONAR_SCANNER_HOME=$SONAR_SCANNER_HOME" >> $GITHUB_ENV
           echo "PATH=$PATH" >> $GITHUB_ENV
 
-      # Step 4: Run SonarQube Scanner
+      # Step 4: Verify sonar-scanner is installed
+      - name: Verify SonarScanner installation
+        run: |
+          echo "Verifying sonar-scanner location and executable"
+          which sonar-scanner || echo "sonar-scanner not found"
+          ls -l $SONAR_SCANNER_HOME/bin/sonar-scanner || echo "sonar-scanner not found in $SONAR_SCANNER_HOME/bin"
+
+      # Step 5: Run SonarQube Scanner
       - name: Run SonarQube Scanner
         run: |
-          # Make sure sonar-scanner is executable
-          chmod +x $SONAR_SCANNER_HOME/bin/sonar-scanner
           # Run sonar-scanner command
           $SONAR_SCANNER_HOME/bin/sonar-scanner \
             -Dsonar.projectKey=shantanushinde10 \
