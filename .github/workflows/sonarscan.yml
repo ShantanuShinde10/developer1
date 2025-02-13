@@ -27,31 +27,44 @@ jobs:
       # Step 3: Install SonarScanner
       - name: Install SonarScanner
         run: |
-          # Download and install SonarScanner
+          # Download SonarScanner CLI
           curl -sS https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip -o sonar-scanner.zip
+          
+          # Unzip the sonar-scanner.zip to /opt/
           unzip sonar-scanner.zip -d /opt/
           
-          # Check the extraction directory
+          # List the extracted directory
           ls -l /opt/sonar-scanner-cli-4.8.0.2856-linux
-          
-          # Set SONAR_SCANNER_HOME environment variable
+
+          # Set the SONAR_SCANNER_HOME variable to the location of the extracted files
           export SONAR_SCANNER_HOME=/opt/sonar-scanner-cli-4.8.0.2856-linux
+          
+          # Add the SonarScanner binary to the PATH
           export PATH=$SONAR_SCANNER_HOME/bin:$PATH
+
+          # Persist the environment variable
           echo "SONAR_SCANNER_HOME=$SONAR_SCANNER_HOME" >> $GITHUB_ENV
           echo "PATH=$PATH" >> $GITHUB_ENV
 
-      # Step 4: Verify sonar-scanner installation
+      # Step 4: Verify the SonarScanner installation
       - name: Verify SonarScanner installation
         run: |
-          # Check if sonar-scanner is in PATH
+          # Verify if sonar-scanner exists in PATH
           which sonar-scanner || echo "sonar-scanner not found"
-          # List files in bin folder
+          
+          # Check if sonar-scanner exists in the correct location
           ls -l $SONAR_SCANNER_HOME/bin/sonar-scanner || echo "sonar-scanner not found in $SONAR_SCANNER_HOME/bin"
+          
+          # Debugging: Check the contents of the bin directory
+          ls -l $SONAR_SCANNER_HOME/bin
 
       # Step 5: Run SonarQube Scanner
       - name: Run SonarQube Scanner
         run: |
-          # Run sonar-scanner command
+          # Ensure sonar-scanner command is available
+          which sonar-scanner
+          
+          # Run sonar-scanner with the configured parameters
           $SONAR_SCANNER_HOME/bin/sonar-scanner \
             -Dsonar.projectKey=shantanushinde10 \
             -Dsonar.organization=your_organization_key_here \
