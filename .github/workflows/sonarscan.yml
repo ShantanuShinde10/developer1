@@ -28,19 +28,29 @@ jobs:
       - name: Install SonarScanner
         run: |
           # Download SonarScanner CLI
+          echo "Downloading SonarScanner..."
           curl -sS https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip -o sonar-scanner.zip
           
+          # Verify if the file was downloaded successfully
+          echo "Listing downloaded files..."
+          ls -l sonar-scanner.zip
+
           # Unzip the sonar-scanner.zip to /opt/
+          echo "Unzipping SonarScanner..."
           unzip sonar-scanner.zip -d /opt/
           
-          # List the contents of the directory to see what we have
-          echo "Listing extracted files in /opt/"
+          # Check if the unzip command was successful
+          echo "Listing files in /opt/"
+          ls -l /opt/
+
+          # Check if the sonar-scanner folder exists after unzip
+          echo "Checking contents of /opt"
           ls -l /opt/sonar-scanner-cli-4.8.0.2856-linux
-          
+
           # Set the SONAR_SCANNER_HOME variable
           export SONAR_SCANNER_HOME=/opt/sonar-scanner-cli-4.8.0.2856-linux
           
-          # List files inside bin to confirm sonar-scanner exists
+          # Check if the bin directory has the sonar-scanner executable
           echo "Listing contents of the bin directory"
           ls -l $SONAR_SCANNER_HOME/bin
           
