@@ -20,10 +20,11 @@ jobs:
           java-version: '17'
           distribution: 'zulu'  # Using Zulu OpenJDK distribution
           
-      # Step 2: Set the JAVA_HOME environment variable
-      - name: Set JAVA_HOME
+      # Step 2: Set the JAVA_HOME and PATH environment variables
+      - name: Set JAVA_HOME and PATH
         run: |
           echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))" >> $GITHUB_ENV
+          echo "PATH=$JAVA_HOME/bin:$PATH" >> $GITHUB_ENV  # Add Java's bin directory to PATH
           echo "JAVA_HOME_17_X64=$JAVA_HOME" >> $GITHUB_ENV  # Set JAVA_HOME for 64-bit version
 
       # Step 3: Checkout code
@@ -40,3 +41,4 @@ jobs:
           SONAR_PROJECT_KEY: 'shantanushinde10'    # Your project key
           SONAR_HOST_URL: 'https://sonarcloud.io'
           JAVA_HOME: ${{ env.JAVA_HOME }}  # Pass JAVA_HOME to SonarCloud action
+          PATH: ${{ env.PATH }}  # Pass updated PATH to the SonarCloud action
