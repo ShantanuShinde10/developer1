@@ -1,4 +1,4 @@
-name: SonarQube Scan
+name: SonarCloud Analysis
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   sonarcloud:
-    name: Analyze with SonarCloud
+    name: SonarCloud Analysis
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -20,20 +20,17 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: '17'
-          distribution: 'temurin'  # Correct distribution name for Java 17
+          distribution: 'temurin'
 
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
           python-version: '3.9'
 
-      - name: Set up SonarCloud
+      - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@v1
         with:
-          projectKey: 'shantanushinde10'
+          entryPoint: 'sonar-scanner'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      - name: Run SonarCloud Scan
-        run: |
-          sonar-scanner
+          SONAR_PROJECT_KEY: 'your_project_key_here'
