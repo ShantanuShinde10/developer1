@@ -20,20 +20,22 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: '17'
-          distribution: 'temurin'  # Make sure you are using the correct JDK version
-
-      - name: Print JAVA_HOME to debug
-        run: echo "JAVA_HOME=$JAVA_HOME"
+          distribution: 'temurin'
 
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
           python-version: '3.9'
 
+      - name: Install SonarScanner
+        run: |
+          curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Commercial/sonar-scanner-cli-4.8.0.2856-linux.zip
+          unzip sonar-scanner.zip -d $HOME
+          export PATH=$HOME/sonar-scanner-4.8.0.2856-linux/bin:$PATH
+          sonar-scanner --version
+
       - name: Run SonarCloud Scan
-        uses: sonarsource/sonarcloud-github-action@v1
-        with:
-          entryPoint: 'sonar-scanner'
+        run: sonar-scanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_PROJECT_KEY: 'your_project_key_here'
