@@ -19,14 +19,17 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'  # You can change to the version you're using
+          python-version: '3.9'
 
       - name: Run SonarQube Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          wget https://github.com/SonarSource/sonar-scanner-cli/releases/download/4.6.2.2472/sonar-scanner-cli-4.6.2.2472-linux.zip
+          # Download and unzip SonarScanner
+          wget https://binaries.sonarsource.com/DownloadSonarScanner/sonar-scanner-cli-4.6.2.2472-linux.zip
           unzip sonar-scanner-cli-4.6.2.2472-linux.zip
+          
+          # Run the SonarScanner
           ./sonar-scanner-4.6.2.2472-linux/bin/sonar-scanner \
             -Dsonar.projectKey=shantanushinde10 \
             -Dsonar.organization=shantanu_shinde \
