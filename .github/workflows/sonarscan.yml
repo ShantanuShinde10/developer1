@@ -16,17 +16,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'          # JDK version
-          distribution: 'adoptopenjdk' # Distribution (you can change this to 'temurin' or 'zulu' if needed)
-
-      - name: Cache SonarQube scanner
-        uses: actions/cache@v3
-        with:
-          path: ~/.sonar
-          key: ${{ runner.os }}-sonar-cache-${{ hashFiles('**/*.java') }}
+      - name: Install dependencies (for JS/Node projects)
+        run: |
+          npm install  # Or any other setup command for your language (e.g., pip install for Python)
 
       - name: Run SonarQube Scan
         env:
@@ -35,7 +27,7 @@ jobs:
           wget https://github.com/SonarSource/sonar-scanner-cli/releases/download/4.6.2.2472/sonar-scanner-cli-4.6.2.2472-linux.zip
           unzip sonar-scanner-cli-4.6.2.2472-linux.zip
           ./sonar-scanner-4.6.2.2472-linux/bin/sonar-scanner \
-            -Dsonar.projectKey=your_project_key \
-            -Dsonar.organization=your_organization_key \
+            -Dsonar.projectKey=shantanushinde10 \
+            -Dsonar.organization=Shantanu Shinde \
             -Dsonar.host.url=http://your_sonarqube_instance_url \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
