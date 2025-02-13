@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: '17'
-          distribution: 'adoptopenjdk'  # Specify distribution as AdoptOpenJDK (Adoptium now)
+          distribution: 'adoptium'  # Corrected distribution to Adoptium (formerly AdoptOpenJDK)
 
       # Step 2: Checkout code
       - name: Checkout code
