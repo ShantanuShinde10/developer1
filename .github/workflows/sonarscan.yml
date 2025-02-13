@@ -38,3 +38,5 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_PROJECT_KEY: 'your_project_key_here'
           JAVA_HOME: ${{ env.JAVA_HOME }}  # Explicitly set JAVA_HOME here
+          PATH: ${{ env.JAVA_HOME }}/bin:${{ env.PATH }}  # Ensure that the JAVA_HOME bin is added to the PATH
+
