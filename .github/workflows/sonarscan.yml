@@ -33,35 +33,37 @@ jobs:
           # Unzip the sonar-scanner.zip to /opt/
           unzip sonar-scanner.zip -d /opt/
           
-          # List the extracted directory
+          # List the contents of the directory to see what we have
+          echo "Listing extracted files in /opt/"
           ls -l /opt/sonar-scanner-cli-4.8.0.2856-linux
-
-          # Set the SONAR_SCANNER_HOME variable to the location of the extracted files
+          
+          # Set the SONAR_SCANNER_HOME variable
           export SONAR_SCANNER_HOME=/opt/sonar-scanner-cli-4.8.0.2856-linux
+          
+          # List files inside bin to confirm sonar-scanner exists
+          echo "Listing contents of the bin directory"
+          ls -l $SONAR_SCANNER_HOME/bin
           
           # Add the SonarScanner binary to the PATH
           export PATH=$SONAR_SCANNER_HOME/bin:$PATH
-
-          # Persist the environment variable
+          
+          # Persist the environment variables
           echo "SONAR_SCANNER_HOME=$SONAR_SCANNER_HOME" >> $GITHUB_ENV
           echo "PATH=$PATH" >> $GITHUB_ENV
 
-      # Step 4: Verify the SonarScanner installation
+      # Step 4: Verify SonarScanner installation
       - name: Verify SonarScanner installation
         run: |
-          # Verify if sonar-scanner exists in PATH
+          # Verify if sonar-scanner exists in the PATH
           which sonar-scanner || echo "sonar-scanner not found"
           
-          # Check if sonar-scanner exists in the correct location
-          ls -l $SONAR_SCANNER_HOME/bin/sonar-scanner || echo "sonar-scanner not found in $SONAR_SCANNER_HOME/bin"
-          
-          # Debugging: Check the contents of the bin directory
+          # Double-check the contents of the bin directory
           ls -l $SONAR_SCANNER_HOME/bin
 
       # Step 5: Run SonarQube Scanner
       - name: Run SonarQube Scanner
         run: |
-          # Ensure sonar-scanner command is available
+          # Verify if sonar-scanner is available
           which sonar-scanner
           
           # Run sonar-scanner with the configured parameters
