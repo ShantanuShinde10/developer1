@@ -31,20 +31,21 @@ jobs:
           curl -sS https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip -o sonar-scanner.zip
           unzip sonar-scanner.zip -d /opt/
           
-          # Check if files exist after extraction
+          # Check the extraction directory
           ls -l /opt/sonar-scanner-cli-4.8.0.2856-linux
-
-          # Set environment variables
+          
+          # Set SONAR_SCANNER_HOME environment variable
           export SONAR_SCANNER_HOME=/opt/sonar-scanner-cli-4.8.0.2856-linux
           export PATH=$SONAR_SCANNER_HOME/bin:$PATH
           echo "SONAR_SCANNER_HOME=$SONAR_SCANNER_HOME" >> $GITHUB_ENV
           echo "PATH=$PATH" >> $GITHUB_ENV
 
-      # Step 4: Verify sonar-scanner is installed
+      # Step 4: Verify sonar-scanner installation
       - name: Verify SonarScanner installation
         run: |
-          echo "Verifying sonar-scanner location and executable"
+          # Check if sonar-scanner is in PATH
           which sonar-scanner || echo "sonar-scanner not found"
+          # List files in bin folder
           ls -l $SONAR_SCANNER_HOME/bin/sonar-scanner || echo "sonar-scanner not found in $SONAR_SCANNER_HOME/bin"
 
       # Step 5: Run SonarQube Scanner
