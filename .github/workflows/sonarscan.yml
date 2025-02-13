@@ -10,7 +10,7 @@ on:
 
 jobs:
   sonarcloud:
-    name: Analyze with SonarQube
+    name: Analyze with SonarCloud
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -21,18 +21,14 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Run SonarQube Scan
+      - name: Set up SonarCloud
+        uses: sonarsource/sonarcloud-github-action@v1
+        with:
+          organization: 'shantanushinde10'  # Replace with your SonarCloud organization key
+          
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Run SonarCloud Scan
         run: |
-          # Download and unzip SonarScanner
-          wget https://binaries.sonarsource.com/DownloadSonarScanner/sonar-scanner-cli-4.6.2.2472-linux.zip
-          unzip sonar-scanner-cli-4.6.2.2472-linux.zip
-          
-          # Run the SonarScanner
-          ./sonar-scanner-4.6.2.2472-linux/bin/sonar-scanner \
-            -Dsonar.projectKey=shantanushinde10 \
-            -Dsonar.organization=shantanu_shinde \
-            -Dsonar.host.url=http://your_sonarqube_instance_url \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.sources=app.py
+          sonar-scanner
