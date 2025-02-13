@@ -34,6 +34,7 @@ jobs:
       # Step 4: Install SonarScanner manually
       - name: Install SonarScanner
         run: |
+          # Download and install SonarScanner
           curl -sS https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip -o sonar-scanner.zip
           unzip sonar-scanner.zip -d /opt/
           export SONAR_SCANNER_HOME=/opt/sonar-scanner-cli-4.8.0.2856-linux
