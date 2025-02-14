@@ -1,4 +1,4 @@
-name: SonarCloud Analysis
+name: SonarQube Analysis (Windows Self-Hosted)
 
 on:
   push:
@@ -9,75 +9,33 @@ on:
       - main
 
 jobs:
-  sonarcloud:
-    runs-on: ubuntu-latest
+  sonar_analysis:
+    runs-on: self-hosted  # Uses your Windows machine
 
     steps:
-    # Step 1: Checkout the code
     - name: Checkout Code
       uses: actions/checkout@v2
 
-    # Step 2: Set up JDK 17 (or upgrade Java to version 17)
     - name: Set up JDK 17
       uses: actions/setup-java@v2
       with:
         java-version: '17'
-        distribution: 'temurin'  # Use Temurin distribution for Java 17
+        distribution: 'temurin'
 
-    # Step 3: Install SonarScanner 4.7 (compatible with Java 11)
-    - name: Install SonarScanner 4.7 (Compatible with Java 11)
+    - name: Ensure SonarQube is Running
       run: |
-        # Download SonarScanner 4.7 CLI (compatible with Java 11)
-        echo "Downloading SonarScanner 4.7..."
-        curl -sS https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip -o sonar-scanner.zip
+        echo "Waiting for SonarQube to be ready..."
+        while (-not (Invoke-WebRequest -Uri "http://localhost:9000/api/system/status" -UseBasicParsing | Select-String '"status":"UP"')) {
+          Start-Sleep -Seconds 5
+        }
+        echo "SonarQube is UP!"
+      shell: pwsh
 
-        # Verify if the file was downloaded successfully
-        echo "Listing downloaded files..."
-        ls -l sonar-scanner.zip
-
-        # Unzip the sonar-scanner.zip to /opt/
-        echo "Unzipping SonarScanner..."
-        unzip sonar-scanner.zip -d /opt/
-
-        # Check if the unzip command was successful
-        echo "Listing files in /opt/"
-        ls -l /opt/
-
-        # Check if the sonar-scanner folder exists after unzip
-        echo "Checking contents of /opt/sonar-scanner-4.7.0.2747-linux"
-        ls -l /opt/sonar-scanner-4.7.0.2747-linux
-
-        # Set the SONAR_SCANNER_HOME variable
-        export SONAR_SCANNER_HOME=/opt/sonar-scanner-4.7.0.2747-linux
-
-        # Check if the bin directory has the sonar-scanner executable
-        echo "Listing contents of the bin directory"
-        ls -l $SONAR_SCANNER_HOME/bin
-
-        # Add the SonarScanner binary to the PATH
-        export PATH=$SONAR_SCANNER_HOME/bin:$PATH
-
-        # Persist the environment variables
-        echo "SONAR_SCANNER_HOME=$SONAR_SCANNER_HOME" >> $GITHUB_ENV
-        echo "PATH=$PATH" >> $GITHUB_ENV
-
-    # Step 4: Run SonarScanner to analyze the code
     - name: Run SonarScanner
       run: |
-        echo "Running SonarScanner..."
-        sonar-scanner \
-          -Dsonar.organization="Shantanu Shinde" \
-          -Dsonar.projectKey=shantanushinde10 \
-          -Dsonar.sources=.
-
-        # Make sure to replace your-organization-name-here and your-project-key-here
-        # with your actual values from your SonarCloud project.
-
-    # Optional: Step 5: Cache SonarCloud dependencies
-    - name: Cache SonarCloud dependencies
-      uses: actions/cache@v2
-      with:
-        path: ~/.sonar/cache
-        key: ${{ runner.os }}-sonar-${{ hashFiles('**/sonar-project.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-sonar-
+        sonar-scanner.bat `
+          -Dsonar.projectKey=shantanushinde10 `
+          -Dsonar.sources=. `
+          -Dsonar.host.url=http://localhost:9000 `
+          -Dsonar.login=your_sonarqube_token_here
+      shell: cmd
