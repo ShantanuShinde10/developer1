@@ -13,6 +13,11 @@ jobs:
     runs-on: self-hosted  # Uses your Windows machine
 
     steps:
+    - name: Disable SSL Verification (Temporary Fix)
+      run: |
+        git config --global http.sslVerify false
+      shell: bash
+
     - name: Checkout Code
       uses: actions/checkout@v2
 
@@ -25,17 +30,30 @@ jobs:
     - name: Ensure SonarQube is Running
       run: |
         echo "Waiting for SonarQube to be ready..."
-        while (-not (Invoke-WebRequest -Uri "http://localhost:9000/api/system/status" -UseBasicParsing | Select-String '"status":"UP"')) {
+        $maxAttempts = 10
+        $attempt = 0
+        while ($attempt -lt $maxAttempts) {
+          try {
+            $response = Invoke-WebRequest -Uri "http://localhost:9000/api/system/status" -UseBasicParsing
+            if ($response.Content -match '"status":"UP"') {
+              echo "SonarQube is UP!"
+              exit 0
+            }
+          } catch {
+            echo "SonarQube is not ready yet..."
+          }
           Start-Sleep -Seconds 5
+          $attempt++
         }
-        echo "SonarQube is UP!"
+        echo "SonarQube did not start in time. Exiting."
+        exit 1
       shell: pwsh
 
     - name: Run SonarScanner
       run: |
-        sonar-scanner.bat `
-          -Dsonar.projectKey=shantanushinde10 `
-          -Dsonar.sources=. `
-          -Dsonar.host.url=http://localhost:9000 `
-          -Dsonar.login=your_sonarqube_token_here
+        sonar-scanner.bat ^
+          -Dsonar.projectKey=shantanushinde10 ^
+          -Dsonar.sources=. ^
+          -Dsonar.host.url=http://localhost:9000 ^
+          -Dsonar.login=${{ secrets.SONARQUBE_TOKEN }}
       shell: cmd
