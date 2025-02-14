@@ -38,4 +38,4 @@ jobs:
             -Dsonar.projectKey=shantanushinde10 \
             -Dsonar.sources=app.py \
             -Dsonar.host.url=https://your-sonarqube-server.com \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }} -X
