@@ -11,7 +11,7 @@ jobs:
   sonar:
     runs-on: ubuntu-latest
     permissions:
-      security-events: write  # 🔥 REQUIRED for GitHub Security integration
+      security-events: write
       actions: read
       contents: read
     steps:
@@ -24,7 +24,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.projectKey=shantanushinde10
+            -Dsonar.projectKey=ShantanuShinde10_sonarscan  # ✅ Corrected Project Key
             -Dsonar.organization=shantanushinde10
             -Dsonar.sources=.
             -Dsonar.host.url=https://sonarcloud.io
