@@ -11,7 +11,7 @@ jobs:
   sonar:
     runs-on: ubuntu-latest
     permissions:
-      security-events: write  # 🔥 REQUIRED for GitHub Security integration
+      security-events: write
       actions: read
       contents: read
     steps:
