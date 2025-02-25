@@ -1,14 +1,19 @@
 name: SonarCloud Analysis
-on: 
+on:
   push:
     branches:
       - main
   pull_request:
     branches:
       - main
+
 jobs:
   sonar:
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write  # 🔥 REQUIRED for GitHub Security integration
+      actions: read
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,8 +28,3 @@ jobs:
             -Dsonar.organization=shantanushinde10
             -Dsonar.sources=.
             -Dsonar.host.url=https://sonarcloud.io
-
-      - name: Upload Code Scanning Alerts
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: results.sarif
