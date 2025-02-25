@@ -1,4 +1,4 @@
-name: SonarQube & Trivy Security Scans
+name: SonarCloud Scan
 
 on:
   push:
@@ -7,76 +7,29 @@ on:
   pull_request:
     branches:
       - main
-  schedule:
-    - cron: '0 0 * * *'  # Runs daily
-
-permissions:
-  security-events: write
-  contents: read
-  issues: write
 
 jobs:
-  security-scan:
-    name: Run SonarQube & Trivy Scans
+  sonarcloud:
     runs-on: ubuntu-latest
-
     steps:
-      # ✅ Checkout the Repository
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 🔹 SonarQube Scan for Code Analysis
-      - name: SonarQube Code Analysis
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: "https://sonarcloud.io"  # Change this if using self-hosted SonarQube
-
-      # 🔹 Trivy File System Scan (Code Scanning)
-      - name: Run Trivy Code & Secret Scanning
-        uses: aquasecurity/trivy-action@0.11.0
+          SONAR_HOST_URL: "https://sonarcloud.io"
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          scanners: 'vuln,secret'  # Scan for vulnerabilities & secrets
-          severity: 'CRITICAL,HIGH'
-
-      # ✅ Upload Trivy SARIF Report to GitHub Code Scanning
-      - name: Upload Trivy Scan Results
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
-
-      # 🔹 Trivy Container Image Scan
-      - name: Run Trivy Image Scanning
-        run: |
-          IMAGE_NAME="my-app:latest"
-          docker build -t $IMAGE_NAME .
-          trivy image --format sarif -o trivy-image-results.sarif --severity CRITICAL,HIGH $IMAGE_NAME
-
-      # ✅ Upload Trivy Image Scan Results to GitHub
-      - name: Upload Trivy Image Scan Results
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-image-results.sarif'
-
-      # 🔹 Create GitHub Issues for Security Findings
-      - name: Create Issues for Trivy Findings
-        run: |
-          TRIVY_ALERTS=$(jq -c '.runs[].results[]' trivy-results.sarif 2>/dev/null || echo "[]")
-
-          echo "$TRIVY_ALERTS" | while IFS= read -r alert; do
-            RULE_ID=$(echo "$alert" | jq -r '.ruleId')
-            SEVERITY=$(echo "$alert" | jq -r '.level')
-            MESSAGE=$(echo "$alert" | jq -r '.message.text')
-            
-            if [[ -n "$RULE_ID" && -n "$SEVERITY" && -n "$MESSAGE" ]]; then
-              echo "Creating GitHub Issue for $RULE_ID..."
-              curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
-                -H "Accept: application/vnd.github.v3+json" \
-                -d "{\"title\":\"[Trivy] $RULE_ID ($SEVERITY)\", \"body\":\"$MESSAGE\", \"labels\":[\"security\", \"trivy\"]}" \
-                "https://api.github.com/repos/${{ github.repository }}/issues"
-            fi
-          done
+          args: >
+            -Dsonar.projectKey=shantanushinde10
+            -Dsonar.organization=shantanushinde10
+            -Dsonar.sources=.
+            -Dsonar.language=python
+            -Dsonar.host.url=https://sonarcloud.io
