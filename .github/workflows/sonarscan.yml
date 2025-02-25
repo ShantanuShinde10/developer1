@@ -1,25 +1,49 @@
-name: SonarCloud Analysis
-on: 
+name: SonarQube Analysis
+
+on:
   push:
     branches:
-      - main
+      - master  # Change this to 'main' if your repository uses 'main'
   pull_request:
     branches:
-      - main
+      - master  # Change this to 'main' if needed
+
 jobs:
   sonar:
+    name: SonarQube Scan
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
-      - name: SonarCloud Scan
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Ensures full history is available
+
+      - name: Set Up JDK 17 (Required for SonarQube)
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache SonarQube Scanner
+        uses: actions/cache@v3
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Run SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
-            -Dsonar.projectKey=shantanushinde10
-            -Dsonar.organization=shantanushinde10
-            -Dsonar.sources=.
-            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.projectKey=your-project-key
+            -Dsonar.organization=your-org
+            -Dsonar.branch.name=master  # Ensure correct branch is analyzed
+
+      - name: Check SonarQube Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
