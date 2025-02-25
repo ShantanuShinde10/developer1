@@ -1,5 +1,4 @@
 name: SonarCloud Analysis
-
 on: 
   push:
     branches:
@@ -7,7 +6,6 @@ on:
   pull_request:
     branches:
       - main
-
 jobs:
   sonar:
     runs-on: ubuntu-latest
@@ -17,10 +15,11 @@ jobs:
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          sonarToken: ${{ secrets.SONAR_TOKEN }}
           args: >
-            -Dsonar.projectKey=your_actual_project_key
-            -Dsonar.organization=your_actual_organization_name
+            -Dsonar.projectKey=shantanushinde10
+            -Dsonar.organization=shantanushinde10
             -Dsonar.sources=.
             -Dsonar.host.url=https://sonarcloud.io
