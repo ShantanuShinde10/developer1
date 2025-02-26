@@ -1,4 +1,5 @@
-name: SonarCloud Analysis
+name: "Security Analysis: SonarCloud & CodeQL + Issue Creation"
+
 on:
   push:
     branches:
@@ -6,19 +7,23 @@ on:
   pull_request:
     branches:
       - main
+  schedule:
+    - cron: '0 6 * * *'  # Runs daily at 6 AM UTC
+  workflow_dispatch:  # Allows manual trigger
+
+permissions:
+  security-events: read
+  issues: write
 
 jobs:
-  sonar:
+  sonarcloud:
+    name: "SonarCloud Scan"
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
     steps:
-      - name: Checkout repository
+      - name: "Checkout repository"
         uses: actions/checkout@v4
 
-      - name: SonarCloud Scan
+      - name: "Run SonarCloud Scan"
         uses: SonarSource/sonarqube-scan-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -28,4 +33,46 @@ jobs:
             -Dsonar.organization=shantanushinde10
             -Dsonar.sources=.
             -Dsonar.host.url=https://sonarcloud.io
-      
+
+  codeql-analysis:
+    name: "CodeQL Security Scan"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "Initialize CodeQL"
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript,python  # Modify based on your repo
+
+      - name: "Run CodeQL Analysis"
+        uses: github/codeql-action/analyze@v3
+
+  create-issues:
+    name: "Create Issues for Security Alerts"
+    runs-on: ubuntu-latest
+    needs: [codeql-analysis]  # Runs after CodeQL scan completes
+
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "Fetch Code Scanning Alerts"
+        id: fetch_alerts
+        run: |
+          curl -s -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/code-scanning/alerts?state=open" \
+            | jq -r '.[] | "\(.number) \(.rule.description) \(.html_url)"' > alerts.txt
+
+      - name: "Create GitHub Issues for Alerts"
+        run: |
+          while read -r number description url; do
+            title="Security Alert: $description"
+            body="🚨 **Code Scanning Alert** found!  \n📌 **Rule**: $description  \n🔗 **View Alert**: [$url]($url)"
+            
+            gh issue create --title "$title" --body "$body" --label "security,code-scanning"
+          done < alerts.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
