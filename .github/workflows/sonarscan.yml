@@ -1,4 +1,4 @@
-name: "Security Analysis: SonarCloud, CodeQL, Trivy + Issue Creation"
+name: "Security Analysis: SonarCloud, CodeQL, Dependabot + Issue Creation"
 
 on:
   push:
@@ -14,10 +14,11 @@ on:
 permissions:
   security-events: write
   issues: write
+  contents: read
 
 jobs:
   security-analysis:
-    name: "SonarCloud, CodeQL, Trivy & Issue Creation"
+    name: "SonarCloud, CodeQL & Dependabot Issue Creation"
     runs-on: ubuntu-latest
 
     steps:
@@ -44,17 +45,6 @@ jobs:
 
       - name: "Run CodeQL Analysis"
         uses: github/codeql-action/analyze@v3
-
-      # 🔹 Trivy Security Scan
-      - name: "Run Trivy Vulnerability Scan"
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: "fs"
-          format: "json"
-          output: "trivy-results.json"
-          exit-code: 0
-          ignore-unfixed: true
-          severity: "HIGH,CRITICAL"
 
       # 🔹 Create GitHub Issues for SonarCloud Alerts
       - name: "Create GitHub Issues for SonarCloud Alerts"
@@ -113,34 +103,31 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
 
-      # 🔹 Create GitHub Issues for Trivy Vulnerabilities
-      - name: "Create GitHub Issues for Trivy Vulnerabilities"
+      # 🔹 Create GitHub Issues for Dependabot Alerts
+      - name: "Create GitHub Issues for Dependabot Alerts"
         if: success()
         run: |
-          if [ -f "trivy-results.json" ]; then
-            ALERTS=$(jq -c '.Results[]? | select(.Vulnerabilities != null) | .Vulnerabilities[]' trivy-results.json)
+          ALERTS=$(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" \
+            "https://api.github.com/repos/${{ github.repository }}/vulnerability-alerts")
 
-            if [ -n "$ALERTS" ]; then
-              echo "Trivy vulnerabilities found. Creating issues..."
-              echo "$ALERTS" | while read -r alert; do
-                VULN_ID=$(echo "$alert" | jq -r '.VulnerabilityID')
-                SEVERITY=$(echo "$alert" | jq -r '.Severity')
-                PACKAGE_NAME=$(echo "$alert" | jq -r '.PkgName')
-                INSTALLED_VERSION=$(echo "$alert" | jq -r '.InstalledVersion')
-                FIXED_VERSION=$(echo "$alert" | jq -r '.FixedVersion // "N/A"')
-
-                ISSUE_TITLE="Fix Trivy Alert - $VULN_ID"
-                ISSUE_BODY="### Security Alert 🚨\n- **Vulnerability**: $VULN_ID\n- **Severity**: $SEVERITY\n- **Package**: $PACKAGE_NAME\n- **Installed Version**: $INSTALLED_VERSION\n- **Fixed Version**: $FIXED_VERSION"
-
-                curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
-                  -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\"]}" \
-                  "https://api.github.com/repos/${{ github.repository }}/issues"
-              done
-            else
-              echo "No vulnerabilities found in Trivy scan."
-            fi
-          else
-            echo "Trivy results file not found."
+          if [ -z "$ALERTS" ] || [ "$ALERTS" == "[]" ]; then
+            echo "No Dependabot alerts found."
+            exit 0
           fi
+
+          echo "Dependabot alerts found. Creating issues..."
+          echo "$ALERTS" | jq -c '.[]' | while read -r alert; do
+            PACKAGE_NAME=$(echo "$alert" | jq -r '.security_advisory.affected_package_name')
+            SEVERITY=$(echo "$alert" | jq -r '.security_advisory.severity')
+            SUMMARY=$(echo "$alert" | jq -r '.security_advisory.summary')
+            ALERT_URL=$(echo "$alert" | jq -r '.html_url')
+
+            ISSUE_TITLE="Fix Dependabot Alert - $PACKAGE_NAME ($SEVERITY)"
+            ISSUE_BODY="### Security Alert 🚨\n- **Package**: $PACKAGE_NAME\n- **Severity**: $SEVERITY\n- **Summary**: $SUMMARY\n- **View Alert**: [Click here]($ALERT_URL)"
+
+            curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
+              -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\"]}" \
+              "https://api.github.com/repos/${{ github.repository }}/issues"
+          done
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
