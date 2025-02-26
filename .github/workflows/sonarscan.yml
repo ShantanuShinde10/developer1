@@ -125,12 +125,12 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
 
-      # 🔹 Create GitHub Issues for Trivy Alerts
+      # 🔹 Create GitHub Issues for Trivy Vulnerabilities
       - name: "Create GitHub Issues for Trivy Vulnerabilities"
         if: success()
         run: |
           if [ -f "trivy-results.json" ]; then
-            ALERTS=$(jq -c '.Results[].Vulnerabilities[]?' trivy-results.json)
+            ALERTS=$(jq -c '.Results[]? | select(.Vulnerabilities != null) | .Vulnerabilities[]' trivy-results.json)
 
             if [ -n "$ALERTS" ]; then
               echo "Trivy vulnerabilities found. Creating issues..."
@@ -153,6 +153,11 @@ jobs:
               echo "No vulnerabilities found in Trivy scan."
             fi
           else
+            echo "Trivy results file not found."
+          fi
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+
             echo "Trivy results file not found."
           fi
         env:
