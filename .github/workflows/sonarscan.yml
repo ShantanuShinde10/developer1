@@ -1,4 +1,4 @@
-name: "Security Analysis: SonarCloud, CodeQL, Dependabot + Secret Scanning"
+name: "Security Analysis: SonarCloud, CodeQL, Dependabot, Secret Scanning"
 
 on:
   push:
@@ -120,30 +120,29 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
 
-      # 🔹 Secret Scanning with Gitleaks
-      - name: "Run Secret Scanning with Gitleaks"
-        run: |
-          docker run --rm -v $(pwd):/repo zricethezav/gitleaks detect -s /repo -r gitleaks-report.json || true
-
       # 🔹 Create GitHub Issues for Secret Scanning Alerts
       - name: "Create GitHub Issues for Secret Scanning Alerts"
+        if: success()
         run: |
-          if [ -s gitleaks-report.json ]; then
-            echo "Secrets detected! Creating GitHub issues..."
-            cat gitleaks-report.json | jq -c '.[]' | while read -r alert; do
-              SECRET_DESC=$(echo "$alert" | jq -r '.Description')
-              SECRET_FILE=$(echo "$alert" | jq -r '.File')
-              LINE_NUM=$(echo "$alert" | jq -r '.Line')
+          ALERTS=$(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" \
+            "https://api.github.com/repos/${{ github.repository }}/secret-scanning/alerts")
 
-              ISSUE_TITLE="🔒 Secret Detected in $SECRET_FILE"
-              ISSUE_BODY="### Secret Exposure Alert 🚨\n- **File**: $SECRET_FILE\n- **Line**: $LINE_NUM\n- **Description**: $SECRET_DESC\n- **Action Required**: Remove or rotate this secret."
+          ALERT_COUNT=$(echo "$ALERTS" | jq 'length')
+
+          if [ "$ALERT_COUNT" -gt 0 ]; then
+            echo "Secret Scanning alerts found. Creating issues..."
+            echo "$ALERTS" | jq -c '.[]' | while read -r alert; do
+              SECRET_TYPE=$(echo "$alert" | jq -r '.secret_type')
+              ALERT_URL=$(echo "$alert" | jq -r '.html_url')
+              ISSUE_TITLE="Fix Secret Scanning Alert - $SECRET_TYPE"
+              ISSUE_BODY="### Security Alert 🚨\n- **Secret Type**: $SECRET_TYPE\n- **View Alert**: [Click here]($ALERT_URL)"
 
               curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
-                -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\", \"secrets\"]}" \
+                -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\"]}" \
                 "https://api.github.com/repos/${{ github.repository }}/issues"
             done
           else
-            echo "No secrets found."
+            echo "No Secret Scanning alerts found."
           fi
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
