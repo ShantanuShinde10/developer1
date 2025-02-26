@@ -8,7 +8,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 6 * * *'
+    - cron: '0 6 * * *'  # Runs daily at 6 AM UTC
   workflow_dispatch:
 
 permissions:
@@ -24,6 +24,7 @@ jobs:
       - name: "Checkout repository"
         uses: actions/checkout@v4
 
+      # 🔹 SonarCloud Scan
       - name: "Run SonarCloud Scan"
         uses: SonarSource/sonarqube-scan-action@v2
         env:
@@ -35,6 +36,7 @@ jobs:
             -Dsonar.sources=.
             -Dsonar.host.url=https://sonarcloud.io
 
+      # 🔹 CodeQL Analysis
       - name: "Initialize CodeQL"
         uses: github/codeql-action/init@v3
         with:
@@ -43,41 +45,67 @@ jobs:
       - name: "Run CodeQL Analysis"
         uses: github/codeql-action/analyze@v3
 
+      # 🔹 Fetch SonarCloud Alerts & Create Issues
       - name: "Create GitHub Issues for SonarCloud Alerts"
-        if: success() # Only runs if previous steps succeed
+        if: success()
         run: |
-          # Fetch open security issues from SonarCloud API
           ALERTS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
-            "https://sonarcloud.io/api/issues/search?componentKeys=<YOUR_PROJECT_KEY>&resolved=false")
+            "https://sonarcloud.io/api/issues/search?componentKeys=ShantanuShinde10_sonarscan&resolved=false")
 
-          # Print the raw JSON response for debugging
           echo "Fetched SonarCloud alerts:"
           echo "$ALERTS" | jq .
 
-          # Check if the response contains issues
           ALERT_COUNT=$(echo "$ALERTS" | jq '.total')
 
           if [ "$ALERT_COUNT" -gt 0 ]; then
             echo "SonarCloud alerts found. Creating issues..."
 
-            # Loop through each issue
             echo "$ALERTS" | jq -c '.issues[]' | while read -r alert; do
-              # Extract details
               RULE_NAME=$(echo "$alert" | jq -r '.rule')
               ISSUE_MESSAGE=$(echo "$alert" | jq -r '.message')
-              ALERT_URL="https://sonarcloud.io/project/issues?id=<ShantanuShinde10_sonarscan>&open=$(echo "$alert" | jq -r '.key')"
+              ALERT_URL="https://sonarcloud.io/project/issues?id=ShantanuShinde10_sonarscan&open=$(echo "$alert" | jq -r '.key')"
 
               ISSUE_TITLE="Fix SonarCloud Alert - $RULE_NAME"
               ISSUE_BODY="### Security Alert 🚨\n- **Rule**: $RULE_NAME\n- **Issue**: $ISSUE_MESSAGE\n- **View Alert**: [Click here]($ALERT_URL)"
 
-              # Create a GitHub Issue
               curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
                 -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\"]}" \
                 "https://api.github.com/repos/${{ github.repository }}/issues"
-
             done
           else
             echo "No security issues found in SonarCloud."
+          fi
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+
+      # 🔹 Fetch CodeQL Alerts & Create Issues
+      - name: "Create GitHub Issues for CodeQL Alerts"
+        if: success()
+        run: |
+          ALERTS=$(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" \
+            "https://api.github.com/repos/${{ github.repository }}/code-scanning/alerts?state=open")
+
+          echo "Fetched CodeQL security alerts:"
+          echo "$ALERTS" | jq .
+
+          ALERT_COUNT=$(echo "$ALERTS" | jq 'length')
+
+          if [ "$ALERT_COUNT" -gt 0 ]; then
+            echo "CodeQL alerts found. Creating issues..."
+
+            echo "$ALERTS" | jq -c '.[]' | while read -r alert; do
+              RULE_NAME=$(echo "$alert" | jq -r '.rule.name')
+              ALERT_URL=$(echo "$alert" | jq -r '.html_url')
+
+              ISSUE_TITLE="Fix CodeQL Alert - $RULE_NAME"
+              ISSUE_BODY="### Security Alert 🚨\n- **Rule**: $RULE_NAME\n- **View Alert**: [Click here]($ALERT_URL)"
+
+              curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
+                -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\"]}" \
+                "https://api.github.com/repos/${{ github.repository }}/issues"
+            done
+          else
+            echo "No security issues found in CodeQL."
           fi
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
