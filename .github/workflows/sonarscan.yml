@@ -1,4 +1,4 @@
-name: "Security Analysis: SonarCloud, CodeQL, Dependabot + Issue Creation" 
+name: "Security Analysis: SonarCloud, CodeQL, Dependabot & Secret Scanning"
 
 on:
   push:
@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   security-analysis:
-    name: "SonarCloud, CodeQL & Dependabot Issue Creation"
+    name: "SonarCloud, CodeQL & Issue Creation"
     runs-on: ubuntu-latest
 
     steps:
@@ -46,7 +46,7 @@ jobs:
       - name: "Run CodeQL Analysis"
         uses: github/codeql-action/analyze@v3
 
-      # 🔹 Create GitHub Issues for SonarCloud Alerts
+      # 🔹 Fetch SonarCloud Alerts & Create Issues
       - name: "Create GitHub Issues for SonarCloud Alerts"
         if: success()
         run: |
@@ -57,6 +57,7 @@ jobs:
 
           if [ "$ALERT_COUNT" -gt 0 ]; then
             echo "SonarCloud alerts found. Creating issues..."
+
             echo "$ALERTS" | jq -c '.issues[]' | while read -r alert; do
               RULE_NAME=$(echo "$alert" | jq -r '.rule')
               ISSUE_MESSAGE=$(echo "$alert" | jq -r '.message')
@@ -75,7 +76,7 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
 
-      # 🔹 Create GitHub Issues for CodeQL Alerts
+      # 🔹 Fetch CodeQL Alerts & Create Issues
       - name: "Create GitHub Issues for CodeQL Alerts"
         if: success()
         run: |
@@ -86,6 +87,7 @@ jobs:
 
           if [ "$ALERT_COUNT" -gt 0 ]; then
             echo "CodeQL alerts found. Creating issues..."
+
             echo "$ALERTS" | jq -c '.[]' | while read -r alert; do
               RULE_NAME=$(echo "$alert" | jq -r '.rule.name')
               ALERT_URL=$(echo "$alert" | jq -r '.html_url')
@@ -103,12 +105,15 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
 
-      # 🔹 Create GitHub Issues for Dependabot Alerts
-      - name: "Create GitHub Issues for Dependabot Alerts"
-        if: success()
+  dependabot-alerts:
+    name: "Check Dependabot Alerts & Create Issues"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Check for Dependabot Alerts"
         run: |
           ALERTS=$(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" \
-            "https://api.github.com/repos/${{ github.repository }}/dependabot/alerts")
+            "https://api.github.com/repos/${{ github.repository }}/vulnerability-alerts")
 
           if [ -z "$ALERTS" ] || [ "$ALERTS" == "[]" ]; then
             echo "No Dependabot alerts found."
@@ -117,8 +122,8 @@ jobs:
 
           echo "Dependabot alerts found. Creating issues..."
           echo "$ALERTS" | jq -c '.[]' | while read -r alert; do
-            PACKAGE_NAME=$(echo "$alert" | jq -r '.security_vulnerability.package.name')
-            SEVERITY=$(echo "$alert" | jq -r '.security_vulnerability.severity')
+            PACKAGE_NAME=$(echo "$alert" | jq -r '.security_advisory.affected_package_name')
+            SEVERITY=$(echo "$alert" | jq -r '.security_advisory.severity')
             SUMMARY=$(echo "$alert" | jq -r '.security_advisory.summary')
             ALERT_URL=$(echo "$alert" | jq -r '.html_url')
 
@@ -132,3 +137,36 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
 
+  secret-scanning:
+    name: "Run Secret Scanning"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "Scan for Secrets with Gitleaks"
+        run: |
+          docker run --rm -v $(pwd):/repo zricethezav/gitleaks detect -s /repo -r gitleaks-report.json || true
+
+      - name: "Check for Detected Secrets"
+        run: |
+          if [ -s gitleaks-report.json ]; then
+            echo "Secrets detected! Creating GitHub issues..."
+            cat gitleaks-report.json | jq -c '.[]' | while read -r alert; do
+              SECRET_DESC=$(echo "$alert" | jq -r '.Description')
+              SECRET_FILE=$(echo "$alert" | jq -r '.File')
+              LINE_NUM=$(echo "$alert" | jq -r '.Line')
+
+              ISSUE_TITLE="🔒 Secret Detected in $SECRET_FILE"
+              ISSUE_BODY="### Secret Exposure Alert 🚨\n- **File**: $SECRET_FILE\n- **Line**: $LINE_NUM\n- **Description**: $SECRET_DESC\n- **Action Required**: Remove or rotate this secret."
+
+              curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
+                -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\", \"secrets\"]}" \
+                "https://api.github.com/repos/${{ github.repository }}/issues"
+            done
+          else
+            echo "No secrets found."
+          fi
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
