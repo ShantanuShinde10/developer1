@@ -1,4 +1,4 @@
-name: "Security Analysis: SonarCloud, CodeQL, Dependabot & Secret Scanning"
+name: "Security Analysis: SonarCloud, CodeQL, Dependabot + Secret Scanning"
 
 on:
   push:
@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   security-analysis:
-    name: "SonarCloud, CodeQL & Issue Creation"
+    name: "SonarCloud, CodeQL, Dependabot & Secret Scanning"
     runs-on: ubuntu-latest
 
     steps:
@@ -46,26 +46,21 @@ jobs:
       - name: "Run CodeQL Analysis"
         uses: github/codeql-action/analyze@v3
 
-      # 🔹 Fetch SonarCloud Alerts & Create Issues
+      # 🔹 Create GitHub Issues for SonarCloud Alerts
       - name: "Create GitHub Issues for SonarCloud Alerts"
         if: success()
         run: |
           ALERTS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
             "https://sonarcloud.io/api/issues/search?componentKeys=ShantanuShinde10_sonarscan&resolved=false")
-
           ALERT_COUNT=$(echo "$ALERTS" | jq '.total')
-
           if [ "$ALERT_COUNT" -gt 0 ]; then
             echo "SonarCloud alerts found. Creating issues..."
-
             echo "$ALERTS" | jq -c '.issues[]' | while read -r alert; do
               RULE_NAME=$(echo "$alert" | jq -r '.rule')
               ISSUE_MESSAGE=$(echo "$alert" | jq -r '.message')
               ALERT_URL="https://sonarcloud.io/project/issues?id=ShantanuShinde10_sonarscan&open=$(echo "$alert" | jq -r '.key')"
-
               ISSUE_TITLE="Fix SonarCloud Alert - $RULE_NAME"
               ISSUE_BODY="### Security Alert 🚨\n- **Rule**: $RULE_NAME\n- **Issue**: $ISSUE_MESSAGE\n- **View Alert**: [Click here]($ALERT_URL)"
-
               curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
                 -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\"]}" \
                 "https://api.github.com/repos/${{ github.repository }}/issues"
@@ -76,25 +71,20 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
 
-      # 🔹 Fetch CodeQL Alerts & Create Issues
+      # 🔹 Create GitHub Issues for CodeQL Alerts
       - name: "Create GitHub Issues for CodeQL Alerts"
         if: success()
         run: |
           ALERTS=$(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" \
             "https://api.github.com/repos/${{ github.repository }}/code-scanning/alerts?state=open")
-
           ALERT_COUNT=$(echo "$ALERTS" | jq 'length')
-
           if [ "$ALERT_COUNT" -gt 0 ]; then
             echo "CodeQL alerts found. Creating issues..."
-
             echo "$ALERTS" | jq -c '.[]' | while read -r alert; do
               RULE_NAME=$(echo "$alert" | jq -r '.rule.name')
               ALERT_URL=$(echo "$alert" | jq -r '.html_url')
-
               ISSUE_TITLE="Fix CodeQL Alert - $RULE_NAME"
               ISSUE_BODY="### Security Alert 🚨\n- **Rule**: $RULE_NAME\n- **View Alert**: [Click here]($ALERT_URL)"
-
               curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
                 -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\"]}" \
                 "https://api.github.com/repos/${{ github.repository }}/issues"
@@ -105,31 +95,24 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
 
-  dependabot-alerts:
-    name: "Check Dependabot Alerts & Create Issues"
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: "Check for Dependabot Alerts"
+      # 🔹 Create GitHub Issues for Dependabot Alerts
+      - name: "Create GitHub Issues for Dependabot Alerts"
+        if: success()
         run: |
           ALERTS=$(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" \
-            "https://api.github.com/repos/${{ github.repository }}/vulnerability-alerts")
-
+            "https://api.github.com/repos/${{ github.repository }}/dependabot/alerts")
           if [ -z "$ALERTS" ] || [ "$ALERTS" == "[]" ]; then
             echo "No Dependabot alerts found."
             exit 0
           fi
-
           echo "Dependabot alerts found. Creating issues..."
           echo "$ALERTS" | jq -c '.[]' | while read -r alert; do
-            PACKAGE_NAME=$(echo "$alert" | jq -r '.security_advisory.affected_package_name')
-            SEVERITY=$(echo "$alert" | jq -r '.security_advisory.severity')
+            PACKAGE_NAME=$(echo "$alert" | jq -r '.security_vulnerability.package.name')
+            SEVERITY=$(echo "$alert" | jq -r '.security_vulnerability.severity')
             SUMMARY=$(echo "$alert" | jq -r '.security_advisory.summary')
             ALERT_URL=$(echo "$alert" | jq -r '.html_url')
-
             ISSUE_TITLE="Fix Dependabot Alert - $PACKAGE_NAME ($SEVERITY)"
             ISSUE_BODY="### Security Alert 🚨\n- **Package**: $PACKAGE_NAME\n- **Severity**: $SEVERITY\n- **Summary**: $SUMMARY\n- **View Alert**: [Click here]($ALERT_URL)"
-
             curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
               -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\"]}" \
               "https://api.github.com/repos/${{ github.repository }}/issues"
@@ -137,19 +120,13 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
 
-  secret-scanning:
-    name: "Run Secret Scanning"
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: "Checkout repository"
-        uses: actions/checkout@v4
-
-      - name: "Scan for Secrets with Gitleaks"
+      # 🔹 Secret Scanning with Gitleaks
+      - name: "Run Secret Scanning with Gitleaks"
         run: |
           docker run --rm -v $(pwd):/repo zricethezav/gitleaks detect -s /repo -r gitleaks-report.json || true
 
-      - name: "Check for Detected Secrets"
+      # 🔹 Create GitHub Issues for Secret Scanning Alerts
+      - name: "Create GitHub Issues for Secret Scanning Alerts"
         run: |
           if [ -s gitleaks-report.json ]; then
             echo "Secrets detected! Creating GitHub issues..."
