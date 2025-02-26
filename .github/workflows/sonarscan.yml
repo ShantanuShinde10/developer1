@@ -1,4 +1,4 @@
-name: "Security Analysis: SonarCloud, CodeQL, Dependabot + Issue Creation"
+name: "Security Analysis: SonarCloud, CodeQL, Dependabot + Issue Creation" 
 
 on:
   push:
