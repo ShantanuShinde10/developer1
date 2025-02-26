@@ -1,4 +1,4 @@
-name: "Security Analysis: SonarCloud & CodeQL + Issue Creation"
+name: "Security Analysis: SonarCloud, CodeQL & Trivy + Issue Creation"
 
 on:
   push:
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   security-analysis:
-    name: "SonarCloud, CodeQL & Issue Creation"
+    name: "SonarCloud, CodeQL, Trivy & Issue Creation"
     runs-on: ubuntu-latest
 
     steps:
@@ -45,6 +45,22 @@ jobs:
       - name: "Run CodeQL Analysis"
         uses: github/codeql-action/analyze@v3
 
+      # 🔹 Trivy Scan (Filesystem & Dependencies)
+      - name: "Run Trivy Scan"
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "json"
+          output: "trivy-results.json"
+          severity: "CRITICAL,HIGH"
+
+      - name: "Upload Trivy Scan Results"
+        uses: actions/upload-artifact@v3
+        with:
+          name: "trivy-results"
+          path: "trivy-results.json"
+
       # 🔹 Fetch SonarCloud Alerts & Create Issues
       - name: "Create GitHub Issues for SonarCloud Alerts"
         if: success()
@@ -52,28 +68,23 @@ jobs:
           ALERTS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
             "https://sonarcloud.io/api/issues/search?componentKeys=ShantanuShinde10_sonarscan&resolved=false")
 
-          echo "Fetched SonarCloud alerts:"
-          echo "$ALERTS" | jq .
-
           ALERT_COUNT=$(echo "$ALERTS" | jq '.total')
 
           if [ "$ALERT_COUNT" -gt 0 ]; then
-            echo "SonarCloud alerts found. Creating issues..."
+            echo "Creating issues for SonarCloud alerts..."
 
             echo "$ALERTS" | jq -c '.issues[]' | while read -r alert; do
               RULE_NAME=$(echo "$alert" | jq -r '.rule')
               ISSUE_MESSAGE=$(echo "$alert" | jq -r '.message')
               ALERT_URL="https://sonarcloud.io/project/issues?id=ShantanuShinde10_sonarscan&open=$(echo "$alert" | jq -r '.key')"
 
-              ISSUE_TITLE="Fix SonarCloud Alert - $RULE_NAME"
+              ISSUE_TITLE="⚠️ Fix SonarCloud Alert - $RULE_NAME"
               ISSUE_BODY="### Security Alert 🚨\n- **Rule**: $RULE_NAME\n- **Issue**: $ISSUE_MESSAGE\n- **View Alert**: [Click here]($ALERT_URL)"
 
               curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
                 -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\"]}" \
                 "https://api.github.com/repos/${{ github.repository }}/issues"
             done
-          else
-            echo "No security issues found in SonarCloud."
           fi
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
@@ -85,27 +96,46 @@ jobs:
           ALERTS=$(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" \
             "https://api.github.com/repos/${{ github.repository }}/code-scanning/alerts?state=open")
 
-          echo "Fetched CodeQL security alerts:"
-          echo "$ALERTS" | jq .
-
           ALERT_COUNT=$(echo "$ALERTS" | jq 'length')
 
           if [ "$ALERT_COUNT" -gt 0 ]; then
-            echo "CodeQL alerts found. Creating issues..."
+            echo "Creating issues for CodeQL alerts..."
 
             echo "$ALERTS" | jq -c '.[]' | while read -r alert; do
               RULE_NAME=$(echo "$alert" | jq -r '.rule.name')
               ALERT_URL=$(echo "$alert" | jq -r '.html_url')
 
-              ISSUE_TITLE="Fix CodeQL Alert - $RULE_NAME"
+              ISSUE_TITLE="⚠️ Fix CodeQL Alert - $RULE_NAME"
               ISSUE_BODY="### Security Alert 🚨\n- **Rule**: $RULE_NAME\n- **View Alert**: [Click here]($ALERT_URL)"
 
               curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
                 -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\"]}" \
                 "https://api.github.com/repos/${{ github.repository }}/issues"
             done
-          else
-            echo "No security issues found in CodeQL."
           fi
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
+
+      # 🔹 Fetch Trivy Alerts & Create Issues
+      - name: "Create GitHub Issues for Trivy Alerts"
+        run: |
+          TRIVY_RESULTS=$(cat trivy-results.json)
+          ALERT_COUNT=$(echo "$TRIVY_RESULTS" | jq '.Results | length')
+
+          if [ "$ALERT_COUNT" -gt 0 ]; then
+            echo "Creating issues for Trivy alerts..."
+
+            echo "$TRIVY_RESULTS" | jq -c '.Results[].Vulnerabilities[]' | while read -r vuln; do
+              PACKAGE=$(echo "$vuln" | jq -r '.PkgName')
+              SEVERITY=$(echo "$vuln" | jq -r '.Severity')
+              CVE=$(echo "$vuln" | jq -r '.VulnerabilityID')
+              URL=$(echo "$vuln" | jq -r '.PrimaryURL')
+
+              ISSUE_TITLE="🔴 Trivy Security Alert: $PACKAGE ($SEVERITY)"
+              ISSUE_BODY="### Security Alert 🚨\n- **Package**: $PACKAGE\n- **Severity**: $SEVERITY\n- **CVE**: $CVE\n- **More Details**: [Trivy Report]($URL)"
+
+              curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
+                -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\"]}" \
+                "https://api.github.com/repos/${{ github.repository }}/issues"
+            done
+          fi
