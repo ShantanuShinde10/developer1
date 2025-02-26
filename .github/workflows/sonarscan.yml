@@ -108,7 +108,7 @@ jobs:
         if: success()
         run: |
           ALERTS=$(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" \
-            "https://api.github.com/repos/${{ github.repository }}/vulnerability-alerts")
+            "https://api.github.com/repos/${{ github.repository }}/dependabot/alerts")
 
           if [ -z "$ALERTS" ] || [ "$ALERTS" == "[]" ]; then
             echo "No Dependabot alerts found."
@@ -117,8 +117,8 @@ jobs:
 
           echo "Dependabot alerts found. Creating issues..."
           echo "$ALERTS" | jq -c '.[]' | while read -r alert; do
-            PACKAGE_NAME=$(echo "$alert" | jq -r '.security_advisory.affected_package_name')
-            SEVERITY=$(echo "$alert" | jq -r '.security_advisory.severity')
+            PACKAGE_NAME=$(echo "$alert" | jq -r '.security_vulnerability.package.name')
+            SEVERITY=$(echo "$alert" | jq -r '.security_vulnerability.severity')
             SUMMARY=$(echo "$alert" | jq -r '.security_advisory.summary')
             ALERT_URL=$(echo "$alert" | jq -r '.html_url')
 
@@ -131,3 +131,4 @@ jobs:
           done
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
+
