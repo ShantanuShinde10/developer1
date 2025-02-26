@@ -1,4 +1,4 @@
-name: "Security Analysis: SonarCloud, CodeQL & Trivy + Issue Creation"
+name: "Security Analysis: SonarCloud, CodeQL, Trivy + Issue Creation"
 
 on:
   push:
@@ -45,20 +45,16 @@ jobs:
       - name: "Run CodeQL Analysis"
         uses: github/codeql-action/analyze@v3
 
-      # 🔹 Trivy Security Scan (Dependency & Container Vulnerability Scan)
-      - name: "Run Trivy Scan"
+      # 🔹 Trivy Security Scan
+      - name: "Run Trivy Vulnerability Scan"
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: "fs"
-          ignore-unfixed: true
           format: "json"
           output: "trivy-results.json"
-
-      - name: "Upload Trivy Scan Results"
-        uses: actions/upload-artifact@v4  # ✅ Updated to v4 (Fixed Deprecation)
-        with:
-          name: "trivy-results"
-          path: "trivy-results.json"
+          exit-code: 0
+          ignore-unfixed: true
+          severity: "HIGH,CRITICAL"
 
       # 🔹 Create GitHub Issues for SonarCloud Alerts
       - name: "Create GitHub Issues for SonarCloud Alerts"
@@ -67,14 +63,10 @@ jobs:
           ALERTS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
             "https://sonarcloud.io/api/issues/search?componentKeys=ShantanuShinde10_sonarscan&resolved=false")
 
-          echo "Fetched SonarCloud alerts:"
-          echo "$ALERTS" | jq .
-
           ALERT_COUNT=$(echo "$ALERTS" | jq '.total')
 
           if [ "$ALERT_COUNT" -gt 0 ]; then
             echo "SonarCloud alerts found. Creating issues..."
-
             echo "$ALERTS" | jq -c '.issues[]' | while read -r alert; do
               RULE_NAME=$(echo "$alert" | jq -r '.rule')
               ISSUE_MESSAGE=$(echo "$alert" | jq -r '.message')
@@ -100,14 +92,10 @@ jobs:
           ALERTS=$(curl -s -H "Authorization: token ${{ secrets.GH_PAT }}" \
             "https://api.github.com/repos/${{ github.repository }}/code-scanning/alerts?state=open")
 
-          echo "Fetched CodeQL security alerts:"
-          echo "$ALERTS" | jq .
-
           ALERT_COUNT=$(echo "$ALERTS" | jq 'length')
 
           if [ "$ALERT_COUNT" -gt 0 ]; then
             echo "CodeQL alerts found. Creating issues..."
-
             echo "$ALERTS" | jq -c '.[]' | while read -r alert; do
               RULE_NAME=$(echo "$alert" | jq -r '.rule.name')
               ALERT_URL=$(echo "$alert" | jq -r '.html_url')
@@ -134,7 +122,6 @@ jobs:
 
             if [ -n "$ALERTS" ]; then
               echo "Trivy vulnerabilities found. Creating issues..."
-
               echo "$ALERTS" | while read -r alert; do
                 VULN_ID=$(echo "$alert" | jq -r '.VulnerabilityID')
                 SEVERITY=$(echo "$alert" | jq -r '.Severity')
@@ -153,11 +140,6 @@ jobs:
               echo "No vulnerabilities found in Trivy scan."
             fi
           else
-            echo "Trivy results file not found."
-          fi
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-
             echo "Trivy results file not found."
           fi
         env:
