@@ -49,13 +49,19 @@ jobs:
           curl -s -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token ${{ secrets.GH_PAT }}" \
             "https://api.github.com/repos/${{ github.repository }}/code-scanning/alerts?state=open" \
-            | jq -r '.[] | "\(.number) \(.rule.description) \(.html_url)"' > alerts.txt
+            | jq -r '.[] | "\(.number)###\(.rule.description)###\(.html_url)"' > alerts.txt
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
 
+
       - name: "Create GitHub Issues for Alerts"
         run: |
-          while read -r number description url; do
+          while IFS="###" read -r number description url; do
+            if [[ -z "$number" || -z "$description" || -z "$url" ]]; then
+              echo "Skipping empty alert entry"
+              continue
+            fi
+            
             title="Security Alert: $description"
             body="🚨 **Code Scanning Alert** found!  \n📌 **Rule**: $description  \n🔗 **View Alert**: [$url]($url)"
             
