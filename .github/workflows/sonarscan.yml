@@ -46,30 +46,7 @@ jobs:
       - name: "Run CodeQL Analysis"
         uses: github/codeql-action/analyze@v3
 
-      # 🔹 Create GitHub Issues for SonarCloud Alerts
-      - name: "Create GitHub Issues for SonarCloud Alerts"
-        if: success()
-        run: |
-          ALERTS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
-            "https://sonarcloud.io/api/issues/search?componentKeys=ShantanuShinde10_sonarscan&resolved=false")
-          ALERT_COUNT=$(echo "$ALERTS" | jq '.total')
-          if [ "$ALERT_COUNT" -gt 0 ]; then
-            echo "SonarCloud alerts found. Creating issues..."
-            echo "$ALERTS" | jq -c '.issues[]' | while read -r alert; do
-              RULE_NAME=$(echo "$alert" | jq -r '.rule')
-              ISSUE_MESSAGE=$(echo "$alert" | jq -r '.message')
-              ALERT_URL="https://sonarcloud.io/project/issues?id=ShantanuShinde10_sonarscan&open=$(echo "$alert" | jq -r '.key')"
-              ISSUE_TITLE="Fix SonarCloud Alert - $RULE_NAME"
-              ISSUE_BODY="### Security Alert 🚨\n- **Rule**: $RULE_NAME\n- **Issue**: $ISSUE_MESSAGE\n- **View Alert**: [Click here]($ALERT_URL)"
-              curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
-                -d "{\"title\":\"$ISSUE_TITLE\", \"body\":\"$ISSUE_BODY\", \"labels\":[\"security\"]}" \
-                "https://api.github.com/repos/${{ github.repository }}/issues"
-            done
-          else
-            echo "No security issues found in SonarCloud."
-          fi
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
+
 
       # 🔹 Create GitHub Issues for CodeQL Alerts
       - name: "Create GitHub Issues for CodeQL Alerts"
